@@ -2052,67 +2052,68 @@ static bool sLayersAccelerationPrefsInitialized = false;
 void
 InitLayersAccelerationPrefs()
 {
-  if (!sLayersAccelerationPrefsInitialized)
-  {
-    // If this is called for the first time on a non-main thread, we're screwed.
-    // At the moment there's no explicit guarantee that the main thread calls
-    // this before the compositor thread, but let's at least make the assumption
-    // explicit.
-    MOZ_ASSERT(NS_IsMainThread(), "can only initialize prefs on the main thread");
+  if (sLayersAccelerationPrefsInitialized) {
+    return;
+  }
 
-    gfxPrefs::GetSingleton();
-    sPrefBrowserTabsRemoteAutostart = BrowserTabsRemoteAutostart();
+  // If this is called for the first time on a non-main thread, we're screwed.
+  // At the moment there's no explicit guarantee that the main thread calls
+  // this before the compositor thread, but let's at least make the assumption
+  // explicit.
+  MOZ_ASSERT(NS_IsMainThread(), "can only initialize prefs on the main thread");
 
-    nsCOMPtr<nsIGfxInfo> gfxInfo = services::GetGfxInfo();
-    int32_t status;
+  gfxPrefs::GetSingleton();
+  sPrefBrowserTabsRemoteAutostart = BrowserTabsRemoteAutostart();
+
+  nsCOMPtr<nsIGfxInfo> gfxInfo = services::GetGfxInfo();
+  int32_t status;
 #ifdef XP_WIN
-    if (gfxPrefs::LayersAccelerationForceEnabled()) {
-      sLayersSupportsD3D9 = true;
-      sLayersSupportsD3D11 = true;
-    } else if (gfxInfo) {
-      if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_9_LAYERS, &status))) {
-        if (status == nsIGfxInfo::FEATURE_STATUS_OK) {
-          if (sPrefBrowserTabsRemoteAutostart && !IsVistaOrLater()) {
-            gfxWarning() << "Disallowing D3D9 on Windows XP with E10S - see bug 1237770";
-          } else {
-            sLayersSupportsD3D9 = true;
-          }
+  if (gfxPrefs::LayersAccelerationForceEnabled()) {
+    sLayersSupportsD3D9 = true;
+    sLayersSupportsD3D11 = true;
+  } else if (gfxInfo) {
+    if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_9_LAYERS, &status))) {
+      if (status == nsIGfxInfo::FEATURE_STATUS_OK) {
+        if (sPrefBrowserTabsRemoteAutostart && !IsVistaOrLater()) {
+          gfxWarning() << "Disallowing D3D9 on Windows XP with E10S - see bug 1237770";
+        } else {
+          sLayersSupportsD3D9 = true;
         }
       }
-      if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_11_LAYERS, &status))) {
-        if (status == nsIGfxInfo::FEATURE_STATUS_OK) {
-          sLayersSupportsD3D11 = true;
-        }
-      }
-      if (!gfxPrefs::LayersD3D11DisableWARP()) {
-        // Always support D3D11 when WARP is allowed.
+    }
+    if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_11_LAYERS, &status))) {
+      if (status == nsIGfxInfo::FEATURE_STATUS_OK) {
         sLayersSupportsD3D11 = true;
       }
-      if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_11_ANGLE, &status))) {
-        if (status == nsIGfxInfo::FEATURE_STATUS_OK) {
-          gANGLESupportsD3D11 = true;
-        }
+    }
+    if (!gfxPrefs::LayersD3D11DisableWARP()) {
+      // Always support D3D11 when WARP is allowed.
+      sLayersSupportsD3D11 = true;
+    }
+    if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_11_ANGLE, &status))) {
+      if (status == nsIGfxInfo::FEATURE_STATUS_OK) {
+        gANGLESupportsD3D11 = true;
       }
     }
-#endif
-
-    if (Preferences::GetBool("media.hardware-video-decoding.enabled", false) &&
-#ifdef XP_WIN
-        Preferences::GetBool("media.windows-media-foundation.use-dxva", true) &&
-#endif
-        NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_HARDWARE_VIDEO_DECODING,
-                                               &status))) {
-        if (status == nsIGfxInfo::FEATURE_STATUS_OK || gfxPrefs::HardwareVideoDecodingForceEnabled()) {
-           sLayersSupportsHardwareVideoDecoding = true;
-      }
-    }
-
-    Preferences::AddBoolVarCache(&sLayersHardwareVideoDecodingFailed,
-                                 "media.hardware-video-decoding.failed",
-                                 false);
-
-    sLayersAccelerationPrefsInitialized = true;
   }
+#endif
+
+  if (Preferences::GetBool("media.hardware-video-decoding.enabled", false) &&
+#ifdef XP_WIN
+    Preferences::GetBool("media.windows-media-foundation.use-dxva", true) &&
+#endif
+      NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_HARDWARE_VIDEO_DECODING,
+                                             &status))) {
+      if (status == nsIGfxInfo::FEATURE_STATUS_OK || gfxPrefs::HardwareVideoDecodingForceEnabled()) {
+         sLayersSupportsHardwareVideoDecoding = true;
+    }
+  }
+
+  Preferences::AddBoolVarCache(&sLayersHardwareVideoDecodingFailed,
+                               "media.hardware-video-decoding.failed",
+                               false);
+
+  sLayersAccelerationPrefsInitialized = true;
 }
 
 bool
