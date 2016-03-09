@@ -389,19 +389,6 @@ gfxWindowsPlatform::gfxWindowsPlatform()
 
   RegisterStrongMemoryReporter(new GfxD2DVramReporter());
 
-  // Set up the D3D11 feature levels we can ask for.
-  if (IsWin8OrLater()) {
-    mFeatureLevels.AppendElement(D3D_FEATURE_LEVEL_11_1);
-  }
-  mFeatureLevels.AppendElement(D3D_FEATURE_LEVEL_11_0);
-  mFeatureLevels.AppendElement(D3D_FEATURE_LEVEL_10_1);
-  mFeatureLevels.AppendElement(D3D_FEATURE_LEVEL_10_0);
-  mFeatureLevels.AppendElement(D3D_FEATURE_LEVEL_9_3);
-
-  UpdateDeviceInitData();
-  InitializeDevices();
-  UpdateRenderMode();
-
   RegisterStrongMemoryReporter(new GPUAdapterReporter());
   RegisterStrongMemoryReporter(new D3D11TextureReporter());
   RegisterStrongMemoryReporter(new D3D9TextureReporter());
@@ -423,6 +410,25 @@ gfxWindowsPlatform::~gfxWindowsPlatform()
    * Uninitialize COM 
    */ 
   CoUninitialize();
+}
+
+void
+gfxWindowsPlatform::InitAcceleration()
+{
+  gfxPlatform::InitAcceleration();
+
+  // Set up the D3D11 feature levels we can ask for.
+  if (IsWin8OrLater()) {
+    mFeatureLevels.AppendElement(D3D_FEATURE_LEVEL_11_1);
+  }
+  mFeatureLevels.AppendElement(D3D_FEATURE_LEVEL_11_0);
+  mFeatureLevels.AppendElement(D3D_FEATURE_LEVEL_10_1);
+  mFeatureLevels.AppendElement(D3D_FEATURE_LEVEL_10_0);
+  mFeatureLevels.AppendElement(D3D_FEATURE_LEVEL_9_3);
+
+  UpdateDeviceInitData();
+  InitializeDevices();
+  UpdateRenderMode();
 }
 
 bool
