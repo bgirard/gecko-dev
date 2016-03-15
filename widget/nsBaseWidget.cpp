@@ -67,6 +67,7 @@
 #ifdef ACCESSIBILITY
 #include "nsAccessibilityService.h"
 #endif
+#include "gfxConfig.h"
 
 #ifdef DEBUG
 #include "nsIObserver.h"
@@ -928,7 +929,7 @@ nsBaseWidget::AutoLayerManagerSetup::~AutoLayerManagerSetup()
 bool
 nsBaseWidget::ComputeShouldAccelerate()
 {
-  return gfxPlatform::GetPlatform()->ShouldUseLayersAcceleration();
+  return gfx::gfxConfig::IsEnabled(gfx::Feature::HW_COMPOSITING);
 }
 
 CompositorBridgeParent* nsBaseWidget::NewCompositorBridgeParent(int aSurfaceWidth,

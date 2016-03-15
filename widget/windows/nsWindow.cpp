@@ -135,6 +135,8 @@
 #include "mozilla/TextEventDispatcherListener.h"
 #include "nsThemeConstants.h"
 #include "nsBidiKeyboard.h"
+#include "nsThemeConstants.h"
+#include "gfxConfig.h"
 
 #include "nsIGfxInfo.h"
 #include "nsUXThemeConstants.h"
@@ -254,8 +256,6 @@ BYTE            nsWindow::sLastMouseButton        = 0;
 
 // Trim heap on minimize. (initialized, but still true.)
 int             nsWindow::sTrimOnMinimize         = 2;
-
-TriStateBool nsWindow::sHasBogusPopupsDropShadowOnMultiMonitor = TRI_UNKNOWN;
 
 static SystemTimeConverter<DWORD>&
 TimeConverter() {
@@ -576,8 +576,7 @@ nsWindow::Create(nsIWidget* aParent,
       parent = nullptr;
     }
 
-    if (IsVistaOrLater() && !IsWin8OrLater() &&
-        HasBogusPopupsDropShadowOnMultiMonitor()) {
+    if (gfxConfig::UseFallback(Fallback::POPUPS_MUST_USE_WS_EX_COMPOSITED)) {
       extendedStyle |= WS_EX_COMPOSITED;
     }
 
@@ -1193,7 +1192,7 @@ NS_METHOD nsWindow::Show(bool bState)
     // our windows correctly. We therefor switch off the drop shadow for
     // pop-up windows when the DWM is disabled and two monitors are
     // connected.
-    if (HasBogusPopupsDropShadowOnMultiMonitor() &&
+    if (gfxConfig::UseFallback(Fallback::DISABLE_POPUP_SHADOWS_ON_MULTI_MONITOR) &&
         WinUtils::GetMonitorCount() > 1 &&
         !nsUXThemeData::CheckForCompositor())
     {
@@ -6820,37 +6819,6 @@ nsWindow::WindowUsesOMTC()
   style |= CS_HREDRAW | CS_VREDRAW;
   DebugOnly<ULONG_PTR> result = ::SetClassLongPtr(mWnd, GCL_STYLE, style);
   NS_WARN_IF_FALSE(result, "Could not reset window class style");
-}
-
-bool
-nsWindow::HasBogusPopupsDropShadowOnMultiMonitor() {
-  if (sHasBogusPopupsDropShadowOnMultiMonitor == TRI_UNKNOWN) {
-    // Since any change in the preferences requires a restart, this can be
-    // done just once.
-    // Check for Direct2D first.
-    sHasBogusPopupsDropShadowOnMultiMonitor =
-      gfxWindowsPlatform::GetPlatform()->GetRenderMode() ==
-        gfxWindowsPlatform::RENDER_DIRECT2D ? TRI_TRUE : TRI_FALSE;
-    if (!sHasBogusPopupsDropShadowOnMultiMonitor) {
-      // Otherwise check if Direct3D 9 may be used.
-      if (gfxPlatform::GetPlatform()->ShouldUseLayersAcceleration() &&
-          !gfxPrefs::LayersPreferOpenGL())
-      {
-        nsCOMPtr<nsIGfxInfo> gfxInfo = services::GetGfxInfo();
-        if (gfxInfo) {
-          int32_t status;
-          if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_9_LAYERS, &status))) {
-            if (status == nsIGfxInfo::FEATURE_STATUS_OK ||
-                gfxPrefs::LayersAccelerationForceEnabled())
-            {
-              sHasBogusPopupsDropShadowOnMultiMonitor = TRI_TRUE;
-            }
-          }
-        }
-      }
-    }
-  }
-  return !!sHasBogusPopupsDropShadowOnMultiMonitor;
 }
 
 void

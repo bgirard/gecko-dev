@@ -69,6 +69,7 @@
 
 #include "SurfaceCache.h"
 #include "gfxPrefs.h"
+#include "gfxConfig.h"
 
 #include "VsyncSource.h"
 #include "DriverCrashGuard.h"
@@ -429,6 +430,24 @@ gfxWindowsPlatform::InitAcceleration()
   UpdateDeviceInitData();
   InitializeDevices();
   UpdateRenderMode();
+
+  if (mRenderMode == RENDER_DIRECT2D ||
+      (gfxConfig::IsEnabled(Feature::HW_COMPOSITING) &&
+       !gfxPrefs::LayersPreferOpenGL() &&
+       (!IsVistaOrLater() || gfxPrefs::LayersPreferD3D9())))
+  {
+    nsCOMPtr<nsIGfxInfo> gfxInfo = services::GetGfxInfo();
+    int32_t status;
+    nsresult rv = gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_9_LAYERS, &status);
+    if (SUCCEEDED(rv) || gfxConfig::IsForcedOnByUser(Feature::HW_COMPOSITING)) {
+      gfxConfig::EnableFallback(Fallback::DISABLE_POPUP_SHADOWS_ON_MULTI_MONITOR,
+                               "Popups do not render with drop-shadows and D2D/D3D9 (bug 603793)");
+      if (IsVistaOrLater() && !IsWin8OrLater()) {
+        gfxConfig::EnableFallback(Fallback::POPUPS_MUST_USE_WS_EX_COMPOSITED,
+                                  "Popups do not render without WS_EX_COMPOSITED (bug 844255)");
+      }
+    }
+  }
 }
 
 bool
@@ -1563,7 +1582,7 @@ bool DoesD3D11DeviceWork()
   checked = true;
 
   if (gfxPrefs::Direct2DForceEnabled() ||
-      gfxPrefs::LayersAccelerationForceEnabled())
+      gfxConfig::IsForcedOnByUser(Feature::HW_COMPOSITING))
   {
     result = true;
     return true;
@@ -1762,7 +1781,7 @@ bool DoesD3D11TextureSharingWorkInternal(ID3D11Device *device, DXGI_FORMAT forma
   }
 
   if (gfxPrefs::Direct2DForceEnabled() ||
-      gfxPrefs::LayersAccelerationForceEnabled())
+      gfxConfig::IsForcedOnByUser(Feature::HW_COMPOSITING))
   {
     return true;
   }
@@ -1965,7 +1984,7 @@ gfxWindowsPlatform::CheckD3D11Support(bool* aCanUseHardware)
     *aCanUseHardware = false;
     return FeatureStatus::Available;
   }
-  if (gfxPrefs::LayersAccelerationForceEnabled()) {
+  if (gfxConfig::IsForcedOnByUser(Feature::HW_COMPOSITING)) {
     *aCanUseHardware = true;
     return FeatureStatus::Available;
   }
@@ -2275,6 +2294,8 @@ gfxWindowsPlatform::InitializeDevices()
     return;
   }
 
+  MOZ_ASSERT(!InSafeMode());
+
   // If we previously crashed initializing devices, bail out now. This is
   // effectively a parent-process only check, since the content process
   // cannot create a lock file.
@@ -2321,13 +2342,7 @@ gfxWindowsPlatform::CheckAccelerationSupport()
            ? FeatureStatus::Available
            : FeatureStatus::Blocked;
   }
-  if (InSafeMode()) {
-    return FeatureStatus::Blocked;
-  }
-  if (!ShouldUseLayersAcceleration()) {
-    return FeatureStatus::Disabled;
-  }
-  return FeatureStatus::Available;
+  return gfxConfig::GetValue(Feature::HW_COMPOSITING);
 }
 
 bool
