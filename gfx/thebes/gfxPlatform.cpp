@@ -170,6 +170,10 @@ static qcms_transform *gCMSRGBATransform = nullptr;
 static bool gCMSInitialized = false;
 static eCMSMode gCMSMode = eCMSMode_Off;
 
+// Device init data should only be used on child processes, so we protect it
+// behind a getter here.
+static DeviceInitData sDeviceInitDataDoNotUseDirectly;
+
 static void ShutdownCMS();
 
 #include "mozilla/gfx/2D.h"
@@ -2226,6 +2230,13 @@ gfxPlatform::GetScaledFontForFontWithCairoSkia(DrawTarget* aTarget, gfxFont* aFo
     return nullptr;
 }
 
+/* static */ DeviceInitData&
+gfxPlatform::GetParentDevicePrefs()
+{
+  MOZ_ASSERT(XRE_IsContentProcess());
+  return sDeviceInitDataDoNotUseDirectly;
+}
+
 /* static */ bool
 gfxPlatform::UsesOffMainThreadCompositing()
 {
@@ -2431,7 +2442,7 @@ void
 gfxPlatform::GetDeviceInitData(mozilla::gfx::DeviceInitData* aOut)
 {
   MOZ_ASSERT(XRE_IsParentProcess());
-  aOut->useAcceleration() = gfxConfig::IsEnabled(Feature::HW_COMPOSITING);
+  aOut->useHwCompositing() = gfxConfig::IsEnabled(Feature::HW_COMPOSITING);
 }
 
 void
@@ -2445,7 +2456,7 @@ gfxPlatform::UpdateDeviceInitData()
   mozilla::gfx::DeviceInitData data;
   mozilla::dom::ContentChild::GetSingleton()->SendGetGraphicsDeviceInitData(&data);
 
-  SetDeviceInitData(data);
+  sDeviceInitDataDoNotUseDirectly = data;
 }
 
 bool
