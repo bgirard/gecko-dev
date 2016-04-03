@@ -2044,7 +2044,6 @@ gfxPlatform::OptimalFormatForContent(gfxContentType aContent)
  * not have any effect until we restart.
  */
 static bool sLayersSupportsD3D9 = false;
-static bool sLayersSupportsD3D11 = false;
 bool gANGLESupportsD3D11 = false;
 static bool sLayersSupportsHardwareVideoDecoding = false;
 static bool sLayersHardwareVideoDecodingFailed = false;
@@ -2076,7 +2075,6 @@ gfxPlatform::InitAcceleration()
 #ifdef XP_WIN
   if (gfxConfig::IsForcedOnByUser(Feature::HW_COMPOSITING)) {
     sLayersSupportsD3D9 = true;
-    sLayersSupportsD3D11 = true;
   } else if (gfxInfo) {
     if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_9_LAYERS, &status))) {
       if (status == nsIGfxInfo::FEATURE_STATUS_OK) {
@@ -2086,15 +2084,6 @@ gfxPlatform::InitAcceleration()
           sLayersSupportsD3D9 = true;
         }
       }
-    }
-    if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_11_LAYERS, &status))) {
-      if (status == nsIGfxInfo::FEATURE_STATUS_OK) {
-        sLayersSupportsD3D11 = true;
-      }
-    }
-    if (!gfxPrefs::LayersD3D11DisableWARP()) {
-      // Always support D3D11 when WARP is allowed.
-      sLayersSupportsD3D11 = true;
     }
     if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_11_ANGLE, &status))) {
       if (status == nsIGfxInfo::FEATURE_STATUS_OK) {
@@ -2163,15 +2152,6 @@ gfxPlatform::CanUseDirect3D9()
   // safe to init the prefs etc. from here.
   MOZ_ASSERT(sLayersAccelerationPrefsInitialized);
   return sLayersSupportsD3D9;
-}
-
-bool
-gfxPlatform::CanUseDirect3D11()
-{
-  // this function is called from the compositor thread, so it is not
-  // safe to init the prefs etc. from here.
-  MOZ_ASSERT(sLayersAccelerationPrefsInitialized);
-  return sLayersSupportsD3D11;
 }
 
 bool
@@ -2444,12 +2424,12 @@ gfxPlatform::GetDeviceInitData(mozilla::gfx::DeviceInitData* aOut)
   aOut->useHwCompositing() = gfxConfig::IsEnabled(Feature::HW_COMPOSITING);
 }
 
-void
+bool
 gfxPlatform::UpdateDeviceInitData()
 {
   if (XRE_IsParentProcess()) {
     // The parent process figures out device initialization on its own.
-    return;
+    return false;
   }
 
   mozilla::gfx::DeviceInitData data;
@@ -2463,6 +2443,7 @@ gfxPlatform::UpdateDeviceInitData()
     GetParentDevicePrefs().useHwCompositing(),
     FeatureStatus::Blocked,
     "Hardware-accelerated compositing disabled in parent process");
+  return true;
 }
 
 bool

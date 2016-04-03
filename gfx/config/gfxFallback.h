@@ -16,6 +16,7 @@ namespace gfx {
   /* Name */                                                                      \
   _(POPUPS_MUST_USE_WS_EX_COMPOSITED)                                             \
   _(DISABLE_POPUP_SHADOWS_ON_MULTI_MONITOR)                                       \
+  _(USE_D3D11_WARP_COMPOSITOR)                                                    \
   /* Add new entries above this comment */
 
 enum class Fallback : uint32_t {
