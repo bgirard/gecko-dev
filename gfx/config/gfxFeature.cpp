@@ -36,6 +36,26 @@ FeatureState::GetValue() const
   return mDefault.mStatus;
 }
 
+const char*
+FeatureState::GetStatusMessage() const
+{
+  AssertInitialized();
+
+  if (mRuntime.mStatus != FeatureStatus::Unused) {
+    return mRuntime.mMessage;
+  }
+  if (mUser.mStatus == FeatureStatus::ForceEnabled) {
+    return nullptr;
+  }
+  if (mEnvironment.mStatus != FeatureStatus::Unused) {
+    return mEnvironment.mMessage;
+  }
+  if (mUser.mStatus != FeatureStatus::Unused) {
+    return mUser.mMessage;
+  }
+  return mDefault.mMessage;
+}
+
 bool
 FeatureState::SetDefault(bool aEnable,
                          FeatureStatus aDisableStatus,

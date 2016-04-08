@@ -44,6 +44,13 @@ gfxConfig::GetValue(Feature aFeature)
   return state.GetValue();
 }
 
+/* static */ const char*
+gfxConfig::GetStatusMessage(Feature aFeature)
+{
+  const FeatureState& state = sConfig.GetState(aFeature);
+  return state.GetStatusMessage();
+}
+
 /* static */ bool
 gfxConfig::SetDefault(Feature aFeature,
                       bool aEnable,

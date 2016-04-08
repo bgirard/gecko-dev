@@ -34,6 +34,7 @@
 #include "mozilla/gfx/Logging.h"
 #include "gfxPrefs.h"
 #include "gfxPlatform.h"
+#include "gfxConfig.h"
 
 #if defined(MOZ_CRASHREPORTER)
 #include "nsExceptionHandler.h"
@@ -1242,6 +1243,10 @@ GfxInfoBase::GetFeatures(JSContext* aCx, JS::MutableHandle<JS::Value> aOut)
   }
   aOut.setObject(*obj);
 
+  if (!gfxPlatform::Initialized()) {
+    printf("Not init\n");
+  }
+
   layers::LayersBackend backend = gfxPlatform::Initialized()
                                   ? gfxPlatform::GetPlatform()->GetCompositorBackend()
                                   : layers::LayersBackend::LAYERS_NONE;
@@ -1250,6 +1255,31 @@ GfxInfoBase::GetFeatures(JSContext* aCx, JS::MutableHandle<JS::Value> aOut)
     JS::Rooted<JSString*> str(aCx, JS_NewStringCopyZ(aCx, backendName));
     JS::Rooted<JS::Value> val(aCx, StringValue(str));
     JS_SetProperty(aCx, obj, "compositor", val);
+  }
+
+  JS::Rooted<JSObject*> webgl1Obj(aCx);
+  gfx::FeatureStatus webgl1Status = gfxConfig::GetValue(Feature::WEBGL1);
+  if (webgl1Status != FeatureStatus::Unused) {
+    printf("webgl\n");
+    if (InitFeatureObject(aCx, obj, "webgl1", webgl1Status, &webgl1Obj)) {
+      const char* message = gfxConfig::GetStatusMessage(Feature::WEBGL1);
+      JS::Rooted<JSString*> str(aCx, JS_NewStringCopyZ(aCx, message));
+      JS::Rooted<JS::Value> val(aCx, StringValue(str));
+      JS_SetProperty(aCx, obj, "status_cause", val);
+    }
+  } else {
+    printf("no webgl\n");
+  }
+
+  JS::Rooted<JSObject*> webgl2Obj(aCx);
+  gfx::FeatureStatus webgl2Status = gfxConfig::GetValue(Feature::WEBGL2);
+  if (webgl2Status != FeatureStatus::Unused) {
+    if (InitFeatureObject(aCx, obj, "webgl2", webgl2Status, &webgl2Obj)) {
+      const char* message = gfxConfig::GetStatusMessage(Feature::WEBGL2);
+      JS::Rooted<JSString*> str(aCx, JS_NewStringCopyZ(aCx, message));
+      JS::Rooted<JS::Value> val(aCx, StringValue(str));
+      JS_SetProperty(aCx, obj, "status_cause", val);
+    }
   }
 
   // If graphics isn't initialized yet, just stop now.

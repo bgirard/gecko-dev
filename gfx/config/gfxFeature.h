@@ -18,6 +18,8 @@ namespace gfx {
   _(HW_COMPOSITING,               Feature,      "Compositing")                    \
   _(D3D11_COMPOSITING,            Feature,      "Direct3D11 Compositing")         \
   _(DIRECT2D,                     Feature,      "Direct2D")                       \
+  _(WEBGL1,                       Feature,      "WebGL 1")                        \
+  _(WEBGL2,                       Feature,      "WebGL 2")                        \
   /* Add new entries above this comment */
 
 enum class Feature : uint32_t {
@@ -34,6 +36,7 @@ class FeatureState
  public:
   bool IsEnabled() const;
   FeatureStatus GetValue() const;
+  const char* GetStatusMessage() const;
 
   void EnableByDefault();
   void DisableByDefault(FeatureStatus aStatus, const char* aMessage);
@@ -74,6 +77,10 @@ class FeatureState
   struct Instance {
     char mMessage[64];
     FeatureStatus mStatus;
+
+    Instance() {
+      mMessage[0] = '\0';
+    }
 
     void Set(FeatureStatus aStatus, const char* aMessage = nullptr);
   };

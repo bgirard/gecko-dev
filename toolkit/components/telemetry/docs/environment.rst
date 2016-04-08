@@ -157,15 +157,19 @@ Structure::
             features: {
               compositor: <string>,     // Layers backend for compositing (eg "d3d11", "none", "opengl")
 
-              // Each the following features can have one of the following statuses:
+              // Each the following features can have one of the following statuses, see gfxTelemetry.h:
               //   "unused"      - This feature has not been requested.
               //   "unavailable" - Safe Mode or OS restriction prevents use.
+              //   "crashinhandler" - This feature crashes when we tried to initialized but we recovered.
               //   "blocked"     - Blocked due to an internal condition such as safe mode.
               //   "blacklisted" - Blocked due to a blacklist restriction.
               //   "disabled"    - User explicitly disabled this default feature.
               //   "failed"      - This feature was attempted but failed to initialize.
+              //   "forceenabled"- This feature was explicitly force-enabled by the user.
+              //   "broken"      - This feature was attempted but later determined to be broken.
+              //   "crashonstartup" - REVIEW: How is this different than 'unavailable'?
               //   "available"   - User has this feature available.
-              "d3d11" { // This feature is Windows-only.
+              "d3d11": { // This feature is Windows-only.
                 status: <string>,
                 warp: <bool>,           // Software rendering (WARP) mode was chosen.
                 textureSharing: <bool>  // Whether or not texture sharing works.
@@ -173,9 +177,14 @@ Structure::
                 blacklisted: <bool>,    // Whether D3D11 is blacklisted; use to see whether WARP
                                         // was blacklist induced or driver-failure induced.
               },
-              "d2d" { // This feature is Windows-only.
+              "d2d": { // This feature is Windows-only.
                 status: <string>,
                 version: <string>,      // Either "1.0" or "1.1".
+              },
+              "webgl1": { // This feature reflects the first initialization of web-gl. Only present if web-gl has been attempted.
+                status: <string>,
+                status_cause: <string>, // Optional: Code or blacklist ID for the decission that lead to the status
+                renderer: <string>, // Optional: The first renderer used. Useful in multi-gpu system. Might differ in subsequent contexts.
               },
             },
           },

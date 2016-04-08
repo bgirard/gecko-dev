@@ -55,6 +55,9 @@ public:
   //  5. Return the default status.
   static FeatureStatus GetValue(Feature aFeature);
 
+  // If the feature has a status message return it. Otherwise return null.
+  static const char* GetStatusMessage(Feature aFeature);
+
   // Initialize the base value of a parameter. The return value is aEnable.
   static bool SetDefault(Feature aFeature,
                          bool aEnable,
