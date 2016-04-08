@@ -50,7 +50,7 @@ var Policy = {
 
 var gGlobalEnvironment;
 function getGlobal() {
-  if (!gGlobalEnvironment) {
+  if (true || !gGlobalEnvironment) {
     gGlobalEnvironment = new EnvironmentCache();
   }
   return gGlobalEnvironment;
