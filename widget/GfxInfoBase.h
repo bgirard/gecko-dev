@@ -45,7 +45,7 @@ public:
   // using GfxInfoBase::GetFeatureSuggestedDriverVersion;
   // using GfxInfoBase::GetWebGLParameter;
   // to import the relevant methods into their namespace.
-  NS_IMETHOD GetFeatureStatus(int32_t aFeature, int32_t *_retval) override;
+  NS_IMETHOD GetFeatureStatus(int32_t aFeature, char** aFailureId, int32_t *_retval) override;
   NS_IMETHOD GetFeatureSuggestedDriverVersion(int32_t aFeature, nsAString & _retval) override;
   NS_IMETHOD GetWebGLParameter(const nsAString & aParam, nsAString & _retval) override;
 
@@ -93,6 +93,7 @@ protected:
   virtual nsresult GetFeatureStatusImpl(int32_t aFeature, int32_t* aStatus,
                                         nsAString& aSuggestedDriverVersion,
                                         const nsTArray<GfxDriverInfo>& aDriverInfo,
+                                        char** aFailureId,
                                         OperatingSystem* aOS = nullptr);
 
   // Gets the driver info table. Used by GfxInfoBase to check for general cases

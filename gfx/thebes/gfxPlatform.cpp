@@ -1237,8 +1237,10 @@ bool gfxPlatform::UseAcceleratedCanvas()
   if (mPreferredCanvasBackend == BackendType::SKIA && gfxPrefs::CanvasAzureAccelerated()) {
     nsCOMPtr<nsIGfxInfo> gfxInfo = do_GetService("@mozilla.org/gfx/info;1");
     int32_t status;
+    char** discardFailureId = nullptr;
     return !gfxInfo ||
       (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_CANVAS2D_ACCELERATION,
+                                              discardFailureId,
                                               &status)) &&
        status == nsIGfxInfo::FEATURE_STATUS_OK);
   }
@@ -2093,12 +2095,13 @@ gfxPlatform::InitAcceleration()
   }
 #endif
 
+  char** discardFailureId = nullptr;
   if (Preferences::GetBool("media.hardware-video-decoding.enabled", false) &&
 #ifdef XP_WIN
     Preferences::GetBool("media.windows-media-foundation.use-dxva", true) &&
 #endif
       NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_HARDWARE_VIDEO_DECODING,
-                                             &status))) {
+                                             discardFailureId, &status))) {
       if (status == nsIGfxInfo::FEATURE_STATUS_OK || gfxPrefs::HardwareVideoDecodingForceEnabled()) {
          sLayersSupportsHardwareVideoDecoding = true;
     }
@@ -2350,7 +2353,8 @@ AllowOpenGL(bool* aWhitelisted)
     gfxInfo->GetData();
 
     int32_t status;
-    if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_OPENGL_LAYERS, &status))) {
+    char** discardFailureId = nullptr;
+    if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_OPENGL_LAYERS, discardFailureId, &status))) {
       if (status == nsIGfxInfo::FEATURE_STATUS_OK) {
         *aWhitelisted = true;
         return true;

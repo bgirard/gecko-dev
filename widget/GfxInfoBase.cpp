@@ -697,12 +697,19 @@ GfxInfoBase::Init()
 }
 
 NS_IMETHODIMP
-GfxInfoBase::GetFeatureStatus(int32_t aFeature, int32_t* aStatus)
+GfxInfoBase::GetFeatureStatus(int32_t aFeature, char** aFailureId, int32_t* aStatus)
 {
+  if (aFailureId) {
+    *aFailureId = nullptr;
+  }
+
   int32_t blocklistAll = gfxPrefs::BlocklistAll();
   if (blocklistAll > 0) {
     gfxCriticalErrorOnce(gfxCriticalError::DefaultOptions(false)) << "Forcing blocklisting all features";
     *aStatus = FEATURE_BLOCKED_DEVICE;
+    if (aFailureId) {
+      *aFailureId = strdup("FEATURE_FAILURE_BLOCK_ALL");
+    }
     return NS_OK;
   } else if (blocklistAll < 0) {
     gfxCriticalErrorOnce(gfxCriticalError::DefaultOptions(false)) << "Ignoring any feature blocklisting.";
@@ -710,20 +717,28 @@ GfxInfoBase::GetFeatureStatus(int32_t aFeature, int32_t* aStatus)
     return NS_OK;
   }
 
-  if (GetPrefValueForFeature(aFeature, *aStatus))
+  if (GetPrefValueForFeature(aFeature, *aStatus)) {
+    if (aFailureId) {
+      *aFailureId = strdup("FEATURE_FAILURE_PREF_OVERRIDE");
+    }
     return NS_OK;
+  }
 
   if (XRE_IsContentProcess()) {
       // Delegate to the parent process.
       mozilla::dom::ContentChild* cc = mozilla::dom::ContentChild::GetSingleton();
       bool success;
-      cc->SendGetGraphicsFeatureStatus(aFeature, aStatus, &success);
+      nsString failureId;
+      cc->SendGetGraphicsFeatureStatus(aFeature, aStatus, &failureId, &success);
+      if (aFailureId) {
+        *aFailureId = strdup(NS_ConvertUTF16toUTF8(failureId).get());
+      }
       return success ? NS_OK : NS_ERROR_FAILURE;
   }
 
   nsString version;
   nsTArray<GfxDriverInfo> driverInfo;
-  return GetFeatureStatusImpl(aFeature, aStatus, version, driverInfo);
+  return GetFeatureStatusImpl(aFeature, aStatus, version, driverInfo, aFailureId);
 }
 
 int32_t
@@ -911,6 +926,7 @@ GfxInfoBase::GetFeatureStatusImpl(int32_t aFeature,
                                   int32_t* aStatus,
                                   nsAString& aSuggestedVersion,
                                   const nsTArray<GfxDriverInfo>& aDriverInfo,
+                                  char** aFailureId,
                                   OperatingSystem* aOS /* = nullptr */)
 {
   if (aFeature <= 0) {
@@ -937,6 +953,9 @@ GfxInfoBase::GetFeatureStatusImpl(int32_t aFeature,
       NS_FAILED(GetAdapterDeviceID(adapterDeviceID)) ||
       NS_FAILED(GetAdapterDriverVersion(adapterDriverVersionString)))
   {
+    if (aFailureId) {
+      *aFailureId = strdup("FEATURE_FAILURE_CANT_RESOLVE_ADAPTER");
+    }
     return NS_OK;
   }
 
@@ -958,6 +977,10 @@ GfxInfoBase::GetFeatureStatusImpl(int32_t aFeature,
   if (status == nsIGfxInfo::FEATURE_STATUS_UNKNOWN) {
     *aStatus = nsIGfxInfo::FEATURE_STATUS_OK;
   } else {
+    if (aFailureId) {
+      // TODO Get the blocklist ruleid
+      *aFailureId = strdup("FEATURE_FAILURE_BLOCKLIST");
+    }
     *aStatus = status;
   }
 
@@ -975,8 +998,9 @@ GfxInfoBase::GetFeatureSuggestedDriverVersion(int32_t aFeature,
   }
 
   int32_t status;
+  char** discardFailureId = nullptr;
   nsTArray<GfxDriverInfo> driverInfo;
-  return GetFeatureStatusImpl(aFeature, &status, aVersion, driverInfo);
+  return GetFeatureStatusImpl(aFeature, &status, aVersion, driverInfo, discardFailureId);
 }
 
 
@@ -1017,10 +1041,12 @@ GfxInfoBase::EvaluateDownloadedBlacklist(nsTArray<GfxDriverInfo>& aDriverInfo)
   int i = 0;
   while (features[i]) {
     int32_t status;
+    char** discardFailureId = nullptr;
     nsAutoString suggestedVersion;
     if (NS_SUCCEEDED(GetFeatureStatusImpl(features[i], &status,
                                           suggestedVersion,
-                                          aDriverInfo))) {
+                                          aDriverInfo,
+                                          discardFailureId))) {
       switch (status) {
         default:
         case nsIGfxInfo::FEATURE_STATUS_OK:
@@ -1260,7 +1286,6 @@ GfxInfoBase::GetFeatures(JSContext* aCx, JS::MutableHandle<JS::Value> aOut)
   JS::Rooted<JSObject*> webgl1Obj(aCx);
   gfx::FeatureStatus webgl1Status = gfxConfig::GetValue(Feature::WEBGL1);
   if (webgl1Status != FeatureStatus::Unused) {
-    printf("webgl\n");
     if (InitFeatureObject(aCx, obj, "webgl1", webgl1Status, &webgl1Obj)) {
       const char* message = gfxConfig::GetStatusMessage(Feature::WEBGL1);
       JS::Rooted<JSString*> str(aCx, JS_NewStringCopyZ(aCx, message));

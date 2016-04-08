@@ -1029,6 +1029,7 @@ private:
 
   virtual bool RecvGetGraphicsFeatureStatus(const int32_t& aFeature,
                                             int32_t* aStatus,
+                                            nsString* aFailureId,
                                             bool* aSuccess) override;
 
   virtual bool RecvGraphicsError(const nsCString& aError) override;

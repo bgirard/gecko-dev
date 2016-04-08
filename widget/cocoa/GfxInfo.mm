@@ -324,10 +324,11 @@ GfxInfo::GetGfxDriverInfo()
 }
 
 nsresult
-GfxInfo::GetFeatureStatusImpl(int32_t aFeature, 
+GfxInfo::GetFeatureStatusImpl(int32_t aFeature,
                               int32_t* aStatus,
                               nsAString& aSuggestedDriverVersion,
                               const nsTArray<GfxDriverInfo>& aDriverInfo,
+                              char** aFailureId,
                               OperatingSystem* aOS /* = nullptr */)
 {
   NS_ENSURE_ARG_POINTER(aStatus);
@@ -342,7 +343,7 @@ GfxInfo::GetFeatureStatusImpl(int32_t aFeature,
     if (aFeature == nsIGfxInfo::FEATURE_WEBGL_MSAA) {
       // Blacklist all ATI cards on OSX, except for
       // 0x6760 and 0x9488
-      if (mAdapterVendorID.Equals(GfxDriverInfo::GetDeviceVendor(VendorATI), nsCaseInsensitiveStringComparator()) && 
+      if (mAdapterVendorID.Equals(GfxDriverInfo::GetDeviceVendor(VendorATI), nsCaseInsensitiveStringComparator()) &&
           (mAdapterDeviceID.LowerCaseEqualsLiteral("0x6760") ||
            mAdapterDeviceID.LowerCaseEqualsLiteral("0x9488"))) {
         *aStatus = nsIGfxInfo::FEATURE_STATUS_OK;
@@ -350,12 +351,19 @@ GfxInfo::GetFeatureStatusImpl(int32_t aFeature,
       }
     } else if (aFeature == nsIGfxInfo::FEATURE_CANVAS2D_ACCELERATION) {
       // See bug 1249659
-      *aStatus = (os > DRIVER_OS_OS_X_10_7) ? nsIGfxInfo::FEATURE_STATUS_OK : nsIGfxInfo::FEATURE_BLOCKED_OS_VERSION;
+      if (os > DRIVER_OS_OS_X_10_7) {
+        *aStatus = nsIGfxInfo::FEATURE_STATUS_OK;
+      } else {
+        *aStatus = nsIGfxInfo::FEATURE_BLOCKED_OS_VERSION;
+        if (aFailureId) {
+          *aFailureId = strdup("FEATURE_FAILURE_CANVAS_OSX_VERSION");
+        }
+      }
       return NS_OK;
     }
   }
 
-  return GfxInfoBase::GetFeatureStatusImpl(aFeature, aStatus, aSuggestedDriverVersion, aDriverInfo, &os);
+  return GfxInfoBase::GetFeatureStatusImpl(aFeature, aStatus, aSuggestedDriverVersion, aDriverInfo, aFailureId, &os);
 }
 
 nsresult

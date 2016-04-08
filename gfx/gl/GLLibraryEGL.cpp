@@ -134,9 +134,12 @@ static bool
 IsAccelAngleSupported(const nsCOMPtr<nsIGfxInfo>& gfxInfo)
 {
     int32_t angleSupport;
+    char* failureId;
     gfxUtils::ThreadSafeGetFeatureStatus(gfxInfo,
                                          nsIGfxInfo::FEATURE_WEBGL_ANGLE,
+                                         &failureId,
                                          &angleSupport);
+    free(failureId);
     return (angleSupport == nsIGfxInfo::FEATURE_STATUS_OK);
 }
 
