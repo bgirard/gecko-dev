@@ -19,8 +19,6 @@ FeatureState::IsEnabled() const
 FeatureStatus
 FeatureState::GetValue() const
 {
-  AssertInitialized();
-
   if (mRuntime.mStatus != FeatureStatus::Unused) {
     return mRuntime.mStatus;
   }
