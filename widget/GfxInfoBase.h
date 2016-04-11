@@ -112,6 +112,7 @@ private:
   virtual int32_t FindBlocklistedDeviceInList(const nsTArray<GfxDriverInfo>& aDriverInfo,
                                               nsAString& aSuggestedVersion,
                                               int32_t aFeature,
+                                              char** aFailureId,
                                               OperatingSystem os);
 
   void EvaluateDownloadedBlacklist(nsTArray<GfxDriverInfo>& aDriverInfo);

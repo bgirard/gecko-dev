@@ -138,7 +138,7 @@ interface nsIGfxInfo : nsISupports
    * If the feature is not ok then aFailureId will give a unique failure Id
    * otherwise it will be empty.
    */
-  long getFeatureStatus(in long aFeature, out string aFailureId);
+  long getFeatureStatus(in long aFeature, [optional] out string aFailureId);
 
   /*
    * Ask about a feature, return the minimum driver version required for it if its status is
