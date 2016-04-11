@@ -619,6 +619,14 @@ BlacklistEntryToDriverInfo(nsIDOMNode* aBlacklistEntry,
     BlacklistNodeToTextValue(dataNode, dataValue);
     aDriverInfo.mHardware = dataValue;
   }
+  if (BlacklistAttrToTextValue(element,
+                               NS_LITERAL_STRING("blockID"),
+                               dataValue)) {
+    BlacklistNodeToTextValue(dataNode, dataValue);
+    nsCString blockIdStr = NS_LITERAL_CSTRING("FEATURE_FAILURE_DL_BLACKLIST_") +
+                           NS_ConvertUTF16toUTF8(dataValue);
+    aDriverInfo.mRuleId = strdup(blockIdStr.get());
+  }
 
   // We explicitly ignore unknown elements.
 
@@ -745,6 +753,7 @@ int32_t
 GfxInfoBase::FindBlocklistedDeviceInList(const nsTArray<GfxDriverInfo>& info,
                                          nsAString& aSuggestedVersion,
                                          int32_t aFeature,
+                                         char** aFailureId,
                                          OperatingSystem os)
 {
   int32_t status = nsIGfxInfo::FEATURE_STATUS_UNKNOWN;
@@ -874,6 +883,9 @@ GfxInfoBase::FindBlocklistedDeviceInList(const nsTArray<GfxDriverInfo>& info,
           info[i].mFeature == aFeature)
       {
         status = info[i].mFeatureStatus;
+        if (aFailureId && info[i].mRuleId.IsEmpty()) {
+          *aFailureId = strdup(info[i].mRuleId.get());
+        }
         break;
       }
     }
@@ -897,6 +909,9 @@ GfxInfoBase::FindBlocklistedDeviceInList(const nsTArray<GfxDriverInfo>& info,
       if (nvVendorID.Equals(adapterVendorID2, nsCaseInsensitiveStringComparator()) &&
         nv310mDeviceId.Equals(adapterDeviceID2, nsCaseInsensitiveStringComparator())) {
         status = nsIGfxInfo::FEATURE_BLOCKED_DEVICE;
+        if (aFailureId) {
+          *aFailureId = strdup("FEATURE_FAILURE_D2D_NV310M_BLOCK");
+        }
       }
     }
   }
@@ -965,22 +980,18 @@ GfxInfoBase::GetFeatureStatusImpl(int32_t aFeature,
   // can back out our static block without doing a release).
   int32_t status;
   if (aDriverInfo.Length()) {
-    status = FindBlocklistedDeviceInList(aDriverInfo, aSuggestedVersion, aFeature, os);
+    status = FindBlocklistedDeviceInList(aDriverInfo, aSuggestedVersion, aFeature, aFailureId, os);
   } else {
     if (!mDriverInfo) {
       mDriverInfo = new nsTArray<GfxDriverInfo>();
     }
-    status = FindBlocklistedDeviceInList(GetGfxDriverInfo(), aSuggestedVersion, aFeature, os);
+    status = FindBlocklistedDeviceInList(GetGfxDriverInfo(), aSuggestedVersion, aFeature, aFailureId, os);
   }
 
   // It's now done being processed. It's safe to set the status to STATUS_OK.
   if (status == nsIGfxInfo::FEATURE_STATUS_UNKNOWN) {
     *aStatus = nsIGfxInfo::FEATURE_STATUS_OK;
   } else {
-    if (aFailureId) {
-      // TODO Get the blocklist ruleid
-      *aFailureId = strdup("FEATURE_FAILURE_BLOCKLIST");
-    }
     *aStatus = status;
   }
 
