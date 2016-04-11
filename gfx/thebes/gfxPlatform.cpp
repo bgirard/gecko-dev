@@ -2073,12 +2073,13 @@ gfxPlatform::InitAcceleration()
   sPrefBrowserTabsRemoteAutostart = BrowserTabsRemoteAutostart();
 
   nsCOMPtr<nsIGfxInfo> gfxInfo = services::GetGfxInfo();
+  char** discardFailureId = nullptr;
   int32_t status;
 #ifdef XP_WIN
   if (gfxConfig::IsForcedOnByUser(Feature::HW_COMPOSITING)) {
     sLayersSupportsD3D9 = true;
   } else if (gfxInfo) {
-    if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_9_LAYERS, &status))) {
+    if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_9_LAYERS, discardFailureId, &status))) {
       if (status == nsIGfxInfo::FEATURE_STATUS_OK) {
         if (sPrefBrowserTabsRemoteAutostart && !IsVistaOrLater()) {
           gfxWarning() << "Disallowing D3D9 on Windows XP with E10S - see bug 1237770";
@@ -2087,7 +2088,7 @@ gfxPlatform::InitAcceleration()
         }
       }
     }
-    if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_11_ANGLE, &status))) {
+    if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_11_ANGLE, discardFailureId, &status))) {
       if (status == nsIGfxInfo::FEATURE_STATUS_OK) {
         gANGLESupportsD3D11 = true;
       }
@@ -2095,7 +2096,6 @@ gfxPlatform::InitAcceleration()
   }
 #endif
 
-  char** discardFailureId = nullptr;
   if (Preferences::GetBool("media.hardware-video-decoding.enabled", false) &&
 #ifdef XP_WIN
     Preferences::GetBool("media.windows-media-foundation.use-dxva", true) &&

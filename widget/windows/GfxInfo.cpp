@@ -1134,9 +1134,10 @@ GfxInfo::GetGfxDriverInfo()
 
 nsresult
 GfxInfo::GetFeatureStatusImpl(int32_t aFeature,
-                              int32_t *aStatus, 
-                              nsAString & aSuggestedDriverVersion, 
+                              int32_t *aStatus,
+                              nsAString & aSuggestedDriverVersion,
                               const nsTArray<GfxDriverInfo>& aDriverInfo,
+                              char **aFailureId,
                               OperatingSystem* aOS /* = nullptr */)
 {
   NS_ENSURE_ARG_POINTER(aStatus);
@@ -1155,6 +1156,9 @@ GfxInfo::GetFeatureStatusImpl(int32_t aFeature,
         NS_FAILED(GetAdapterDeviceID(adapterDeviceID)) ||
         NS_FAILED(GetAdapterDriverVersion(adapterDriverVersionString)))
     {
+      if (aFailureId) {
+        *aFailureId = strdup("FEATURE_FAILURE_GET_ADAPTER");
+      }
       return NS_ERROR_FAILURE;
     }
 
@@ -1171,12 +1175,18 @@ GfxInfo::GetFeatureStatusImpl(int32_t aFeature,
         !adapterVendorID.LowerCaseEqualsLiteral("0xabab") &&
         !adapterVendorID.LowerCaseEqualsLiteral("0xdcdc"))
     {
+      if (aFailureId) {
+        *aFailureId = strdup("FEATURE_FAILURE_TEST");
+      }
       *aStatus = FEATURE_BLOCKED_DEVICE;
       return NS_OK;
     }
 
     uint64_t driverVersion;
     if (!ParseDriverVersion(adapterDriverVersionString, &driverVersion)) {
+      if (aFailureId) {
+        *aFailureId = strdup("FEATURE_FAILURE_PARSE_DRIVER");
+      }
       return NS_ERROR_FAILURE;
     }
 
@@ -1203,7 +1213,7 @@ GfxInfo::GetFeatureStatusImpl(int32_t aFeature,
     }
   }
 
-  return GfxInfoBase::GetFeatureStatusImpl(aFeature, aStatus, aSuggestedDriverVersion, aDriverInfo, &os);
+  return GfxInfoBase::GetFeatureStatusImpl(aFeature, aStatus, aSuggestedDriverVersion, aDriverInfo, aFailureId, &os);
 }
 
 nsresult
@@ -1273,7 +1283,8 @@ GfxInfo::DescribeFeatures(JSContext* aCx, JS::Handle<JSObject*> aObj)
     bool blacklisted = false;
     if (nsCOMPtr<nsIGfxInfo> gfxInfo = services::GetGfxInfo()) {
       int32_t status;
-      if (SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_11_LAYERS, &status))) {
+      char** discardFailureId = nullptr;
+      if (SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_11_LAYERS, discardFailureId, &status))) {
         blacklisted = (status != nsIGfxInfo::FEATURE_STATUS_OK);
       }
     }

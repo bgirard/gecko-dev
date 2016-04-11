@@ -425,7 +425,8 @@ gfxWindowsPlatform::InitAcceleration()
   {
     nsCOMPtr<nsIGfxInfo> gfxInfo = services::GetGfxInfo();
     int32_t status;
-    nsresult rv = gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_9_LAYERS, &status);
+    char** discardFailureId = nullptr;
+    nsresult rv = gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT3D_9_LAYERS, discardFailureId, &status);
     if (SUCCEEDED(rv) || gfxConfig::IsForcedOnByUser(Feature::HW_COMPOSITING)) {
       gfxConfig::EnableFallback(Fallback::DISABLE_POPUP_SHADOWS_ON_MULTI_MONITOR,
                                "Popups do not render with drop-shadows and D2D/D3D9 (bug 603793)");
@@ -1934,7 +1935,8 @@ IsGfxInfoStatusOkay(int32_t aFeature)
   }
 
   int32_t status;
-  if (FAILED(gfxInfo->GetFeatureStatus(aFeature, &status))) {
+  char** discardFailureId = nullptr;
+  if (FAILED(gfxInfo->GetFeatureStatus(aFeature, discardFailureId, &status))) {
     return true;
   }
 
@@ -2481,7 +2483,8 @@ IsD2DBlacklisted()
   nsCOMPtr<nsIGfxInfo> gfxInfo = services::GetGfxInfo();
   if (gfxInfo) {
     int32_t status;
-    if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT2D, &status))) {
+    char** discardFailureId = nullptr;
+    if (NS_SUCCEEDED(gfxInfo->GetFeatureStatus(nsIGfxInfo::FEATURE_DIRECT2D, discardFailureId, &status))) {
       if (status != nsIGfxInfo::FEATURE_STATUS_OK) {
         return true;
       }
