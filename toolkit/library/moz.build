@@ -373,5 +373,8 @@ if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'windows':
         'oleaut32',
     ]
 
+OS_LIBS += ["-L/Users/bgirard/mozilla/mozilla-central/tree/gfx/webrenderer/target/release -lwebrenderer"]
+
+
 # This needs to be last
 USE_LIBS += ['StaticXULComponentsEnd']
